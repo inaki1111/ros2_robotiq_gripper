@@ -117,5 +117,17 @@ def generate_launch_description():
             default_value="empty.sdf",
             description="Gazebo world file",
         ),
+        DeclareLaunchArgument(
+            "activate_joint_controller",
+            default_value="true",
+            description="Flag to activate the initial joint controller.",
+        ),
+
+        DeclareLaunchArgument(
+            "initial_joint_controller",
+            default_value="robotiq_gripper_controller",
+            description="Name of the initial joint controller.",
+        ),
+
     ]
     return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])
