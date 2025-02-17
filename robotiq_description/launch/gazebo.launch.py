@@ -25,6 +25,11 @@ def launch_setup(context, *args, **kwargs):
     )
     robot_description = {"robot_description": ParameterValue(robot_description_content, value_type=str)}
 
+    robot_description_param = {
+        "robot_description": launch_ros.parameter_descriptions.ParameterValue(
+            robot_description_content, value_type=str
+        )
+    }
     robot_state_publisher_node = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
