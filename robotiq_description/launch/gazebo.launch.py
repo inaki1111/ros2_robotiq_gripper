@@ -8,14 +8,14 @@ from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitut
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from ament_index_python.packages import get_package_share_directory
-
+import launch_ros
 def launch_setup(context, *args, **kwargs):
+    description_pkg_share = launch_ros.substitutions.FindPackageShare(
+        package="robotiq_description"
+    ).find("robotiq_description")
     description_file = LaunchConfiguration("description_file")
     gazebo_gui = LaunchConfiguration("gazebo_gui")
     world_file = LaunchConfiguration("world_file")
-    activate_joint_controller = LaunchConfiguration("activate_joint_controller")
-    initial_joint_controller = LaunchConfiguration("initial_joint_controller")
-
     robot_description_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
@@ -32,25 +32,57 @@ def launch_setup(context, *args, **kwargs):
         parameters=[{"use_sim_time": True}, robot_description],
     )
 
-    joint_state_broadcaster_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
+    update_rate_config_file = PathJoinSubstitution(
+        [
+            description_pkg_share,
+            "config",
+            "robotiq_update_rate.yaml",
+        ]
     )
 
-    initial_joint_controller_spawner_started = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=[initial_joint_controller, "-c", "/controller_manager"],
-        condition=IfCondition(activate_joint_controller),
+    controllers_file = "robotiq_controllers.yaml"
+    initial_joint_controllers = PathJoinSubstitution(
+        [description_pkg_share, "config", controllers_file]
     )
-    initial_joint_controller_spawner_stopped = Node(
+
+    control_node = launch_ros.actions.Node(
+        package="controller_manager",
+        executable="ros2_control_node",
+        parameters=[
+            robot_description_param,
+            update_rate_config_file,
+            initial_joint_controllers,
+        ],
+    )
+
+    robot_state_publisher_node = launch_ros.actions.Node(
+        package="robot_state_publisher",
+        executable="robot_state_publisher",
+        parameters=[robot_description_param],
+    )
+
+
+    joint_state_broadcaster_spawner = launch_ros.actions.Node(
         package="controller_manager",
         executable="spawner",
-        arguments=[initial_joint_controller, "-c", "/controller_manager", "--stopped"],
-        condition=UnlessCondition(activate_joint_controller),
-    ) 
+        arguments=[
+            "joint_state_broadcaster",
+            "--controller-manager",
+            "/controller_manager",
+        ],
+    )
 
+    robotiq_gripper_controller_spawner = launch_ros.actions.Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["robotiq_gripper_controller", "-c", "/controller_manager"],
+    )
+
+    robotiq_activation_controller_spawner = launch_ros.actions.Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["robotiq_activation_controller", "-c", "/controller_manager"],
+    )
 
 
 
@@ -93,8 +125,8 @@ def launch_setup(context, *args, **kwargs):
     return [
         robot_state_publisher_node,
         joint_state_broadcaster_spawner,
-        initial_joint_controller_spawner_stopped,
-        initial_joint_controller_spawner_started,
+        robotiq_gripper_controller_spawner,
+        robotiq_activation_controller_spawner,
         gz_spawn_entity,
         gz_launch_description,
         gz_sim_bridge,
