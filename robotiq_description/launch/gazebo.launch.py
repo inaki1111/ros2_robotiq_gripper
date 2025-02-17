@@ -92,6 +92,9 @@ def launch_setup(context, *args, **kwargs):
 
     return [
         robot_state_publisher_node,
+        joint_state_broadcaster_spawner,
+        initial_joint_controller_spawner_stopped,
+        initial_joint_controller_spawner_started,
         gz_spawn_entity,
         gz_launch_description,
         gz_sim_bridge,
