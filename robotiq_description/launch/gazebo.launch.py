@@ -13,6 +13,8 @@ def launch_setup(context, *args, **kwargs):
     description_file = LaunchConfiguration("description_file")
     gazebo_gui = LaunchConfiguration("gazebo_gui")
     world_file = LaunchConfiguration("world_file")
+    activate_joint_controller = LaunchConfiguration("activate_joint_controller")
+    initial_joint_controller = LaunchConfiguration("initial_joint_controller")
 
     robot_description_content = Command(
         [
@@ -29,6 +31,30 @@ def launch_setup(context, *args, **kwargs):
         output="both",
         parameters=[{"use_sim_time": True}, robot_description],
     )
+
+    joint_state_broadcaster_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
+    )
+
+    initial_joint_controller_spawner_started = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=[initial_joint_controller, "-c", "/controller_manager"],
+        condition=IfCondition(activate_joint_controller),
+    )
+    initial_joint_controller_spawner_stopped = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=[initial_joint_controller, "-c", "/controller_manager", "--stopped"],
+        condition=UnlessCondition(activate_joint_controller),
+    ) 
+
+
+
+
+
 
     gz_spawn_entity = Node(
         package="ros_gz_sim",
